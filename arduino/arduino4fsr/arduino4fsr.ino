@@ -9,12 +9,25 @@ int vMin[] = {1023, 1023, 1023, 1023};
 int vMax[] = {0,    0,    0,    0};
 int vals[] = {0,0,0,0};
 
+int echoPin = 9;
+int trigPin = 10;
+int ledPin = 8;
+
+#define DISTSN 9
+#define DIST_TRIGGER 400
+int dists[DISTSN];
+int distsIndex;
+
 void setup() {
   // put your setup code here, to run once:
   for (int i = 0; i != FSRN; i++)
   {
     pinMode (fsrs[i], INPUT);
   }
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  memset(dists, 0, DISTSN);
   Serial.begin (9600);
   while (millis() < 5000) {
     for (int i = 0; i != FSRN; i++)
@@ -34,7 +47,7 @@ void setup() {
 
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // fsr buttons
   for (int i = 0; i != FSRN; i++)
   {
     int v = analogRead(fsrs[i]);
@@ -42,10 +55,48 @@ void loop() {
     v = constrain(v, 0, 255);
     vals[i] = v;
   }
+
+  // distance sensor
+  // Clears the trigPin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  long duration = pulseIn(echoPin, HIGH);
+  
+  // Calculating the distance
+  int distance = duration*0.034/2;
+
+  dists[distsIndex] = distance;
+  distsIndex = (distsIndex + 1) % DISTSN;
+  
+  // Averaging distance
+  long d = 0;
+  for (int i = 0; i != DISTSN; i++)
+  {
+    d += dists[i];
+  }
+  float resultdistance = d / DISTSN;
+
+  if (resultdistance > DIST_TRIGGER)
+  {
+    digitalWrite(ledPin, HIGH);
+  }
+  else
+  {
+    digitalWrite(ledPin, LOW);
+  }
+  
   Serial.print(vals[0]);Serial.print(',');
   Serial.print(vals[1]);Serial.print(',');
   Serial.print(vals[2]);Serial.print(',');
-  Serial.println(vals[3]);
+  Serial.print(vals[3]);Serial.print(',');
+  Serial.println(resultdistance);
   
   delay (50);
 }
