@@ -40,3 +40,6 @@ sudo pip3 install --upgrade google-cloud-speech
 sudo pip3 install giphy_client
 
 # Neither covers getting a Giphy API. You will have to get one and put it at [melchiades-path]/giphy_key.txt
+
+# Pillow is part of the default RPi installation (maybe?) PIL is guaranteed
+# sudo pip3 install Pillow
