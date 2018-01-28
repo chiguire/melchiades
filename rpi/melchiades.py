@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 import os, sys, pygame, math
 from pygame.locals import *
 
@@ -99,10 +100,14 @@ class GameState:
         self.requested_game_state = STATE_LISTENING
 
     def update_STATE_LISTENING(self):
+        import micrec
+        self.heard_bytes = micrec.record_stuff()
         self.requested_game_state = STATE_RECOGNIZING
 
     def update_STATE_RECOGNIZING(self):
-        self.transcripted = "THIS IS A DRILL ABOUT QUESTIONS AND ANSWERS"
+        import micrec
+        self.transcripted = micrec.recognize(self.heard_bytes)
+        print("Heard: %s" % self.transcripted)
         self.requested_game_state = STATE_THINKING
         self.current_timer = 0
         self.target_timer = 30*5
