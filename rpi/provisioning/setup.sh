@@ -43,3 +43,9 @@ sudo pip3 install giphy_client
 
 # Pillow is part of the default RPi installation (maybe?) PIL is guaranteed
 # sudo pip3 install Pillow
+
+# Why not trei your webcam before dispairing?
+sudo apt-get install fswebcam
+# fswebcam -d /dev/video0 -r 640x480 test.jpg
+
+# Font: Mortified by Walter E Stewart
