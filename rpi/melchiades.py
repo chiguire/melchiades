@@ -3,6 +3,8 @@
 import os, sys, pygame, math, requests
 from pygame.locals import *
 import gifplayer
+import serial
+import ard
 
 size = width, height = 1080, 860
 black = 0, 0, 0
@@ -17,7 +19,7 @@ STATE_REVEAL = "STATE_REVEAL"
 STATE_THANKS = "STATE_THANKS"
 
 class GameState:
-    def __init__(self, game_state, screen, font, w, h):
+    def __init__(self, game_state, ser, screen, font, w, h):
         self.game_state = game_state
         self.request_game_state = None
         self.current_timer = 0
@@ -27,6 +29,8 @@ class GameState:
         self.debugfont = pygame.font.SysFont("Arial", 14)
         self.width = w
         self.height = h
+        self.ser = ser
+        self.read_from_serial = ""
     
         self.drawfunc = {
             STATE_START: self.draw_STATE_START,
@@ -53,7 +57,7 @@ class GameState:
 
     def draw(self):
         self.drawfunc[self.game_state]()
-        txt = "DEBUG> State: %s Timer: %d/%d" % (self.game_state, self.current_timer, self.target_timer)
+        txt = "DEBUG> State: %s Timer: %d/%d Serial: %s" % (self.game_state, self.current_timer, self.target_timer, self.read_from_serial)
         debug_text = self.debugfont.render(txt, True, (255,255,255), None)
         self.screen.blit(debug_text, (10, self.height - 10 - debug_text.get_rect().height))
 
@@ -98,6 +102,10 @@ class GameState:
     #UPDATE
 
     def update(self):
+        try:
+            self.read_from_serial = self.ser.readline().decode('ascii').strip()
+        except:
+            self.read_from_serial = ""
         self.updatefunc[self.game_state]()
         if self.requested_game_state is not None:
             self.game_state = self.requested_game_state
@@ -105,9 +113,23 @@ class GameState:
     
     def update_STATE_START(self):
         self.requested_game_state = STATE_IDLE
+        try:
+            self.ser.write(b'1')
+        except:
+            pass
 
     def update_STATE_IDLE(self):
-        self.requested_game_state = STATE_LISTENING
+        arduino_state = ard.try_to_read_arduino_state(self.read_from_serial)
+        try:
+            self.ser.write(b'1')
+        except:
+            pass
+
+        if arduino_state is None:
+            pass
+        else:
+            if arduino_state.button0 or arduino_state.button1 or arduino_state.button2 or arduino_state.button3:
+                self.requested_game_state = STATE_LISTENING
 
     def update_STATE_LISTENING(self):
         import micrec
@@ -118,12 +140,21 @@ class GameState:
         import micrec
         self.transcripted = micrec.recognize(self.heard_bytes)
         print("Heard: %s" % self.transcripted)
-        self.requested_game_state = STATE_THINKING
+
+        if self.transcripted == "":
+            print("Heard nothing")
+            self.requested_game_state = STATE_IDLE
+        else:
+            self.requested_game_state = STATE_THINKING
 
     def update_STATE_THINKING(self):
         import giphy
         gif_url = giphy.giphy_translate(self.transcripted)
-        print("Gif URL: %s" % gif_url)
+        print("Gif URL: %s" % str(gif_url))
+
+        if gif_url is None:
+            self.requested_game_state = STATE_IDLE
+            return
         gif_response = requests.get(gif_url)
 
         if gif_response.status_code == 200:
@@ -138,6 +169,10 @@ class GameState:
         
 
     def update_STATE_ABOUT_TO_REVEAL(self):
+        try:
+            self.ser.write(b'2')
+        except:
+            pass
         self.requested_game_state = STATE_REVEAL 
 
     def update_STATE_REVEAL(self):
@@ -157,8 +192,9 @@ def init_and_loop():
     os.environ['SDL_VIDEO_CENTERED'] = '0'
     screen = pygame.display.set_mode(size, pygame.NOFRAME)
     lefont = pygame.font.Font("Mortified.ttf", 80)
+    ser = serial.Serial(port="/dev/serial/by-id/usb-Arduino_Srl_Arduino_Mega_754313433343510140C1-if00", baudrate=9600, write_timeout=0.05)
 
-    game_state = GameState(STATE_START, screen, lefont, width, height)
+    game_state = GameState(STATE_START, ser, screen, lefont, width, height)
 
     while 1:
         for event in pygame.event.get():

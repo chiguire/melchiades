@@ -21,8 +21,11 @@ def giphy_translate(t):
         return None
 
     #pprint(api_response)
-    data = api_response.data
-    images = data.images
-    original = images.original
-    url = original.url
+    try:
+        data = api_response.data
+        images = data.images
+        original = images.original
+        url = original.url
+    except:
+        return None
     return url
