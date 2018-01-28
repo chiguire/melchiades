@@ -31,6 +31,7 @@ class GameState:
         self.height = h
         self.ser = ser
         self.read_from_serial = ""
+        self.dtxt = ""
     
         self.drawfunc = {
             STATE_START: self.draw_STATE_START,
@@ -57,8 +58,8 @@ class GameState:
 
     def draw(self):
         self.drawfunc[self.game_state]()
-        txt = "DEBUG> State: %s Timer: %d/%d Serial: %s" % (self.game_state, self.current_timer, self.target_timer, self.read_from_serial)
-        debug_text = self.debugfont.render(txt, True, (255,255,255), None)
+        self.dtxt = "DEBUG> State: %s Timer: %d/%d Serial: %s" % (self.game_state, self.current_timer, self.target_timer, self.read_from_serial)
+        debug_text = self.debugfont.render(self.dtxt, True, (255,255,255), None)
         self.screen.blit(debug_text, (10, self.height - 10 - debug_text.get_rect().height))
 
     def draw_STATE_START(self):
@@ -102,6 +103,7 @@ class GameState:
     #UPDATE
 
     def update(self):
+        print(self.dtxt)
         try:
             self.read_from_serial = self.ser.readline().decode('ascii').strip()
         except:
