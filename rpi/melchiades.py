@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-
-import os, sys, pygame, math
+import os, sys, pygame, math, requests
 from pygame.locals import *
+import gifplayer
 
 size = width, height = 1080, 860
 black = 0, 0, 0
@@ -58,18 +58,23 @@ class GameState:
         self.screen.blit(debug_text, (10, self.height - 10 - debug_text.get_rect().height))
 
     def draw_STATE_START(self):
-        pass
+        self.screen.fill(black)
+
 
     def draw_STATE_IDLE(self):
+        self.screen.fill(black)
         pass
 
     def draw_STATE_LISTENING(self):
+        self.screen.fill(black)
         pass
 
     def draw_STATE_RECOGNIZING(self):
+        self.screen.fill(black)
         pass
 
     def draw_STATE_THINKING(self):
+        self.screen.fill(black)
         from mtextrender import render_lines
         textsurfaces = render_lines(self.font, self.transcripted, self.width, self.height)
 
@@ -77,12 +82,17 @@ class GameState:
             self.screen.blit(tsf[0], tsf[1])
 
     def draw_STATE_ABOUT_TO_REVEAL(self):
+        self.screen.fill(black)
         pass
 
     def draw_STATE_REVEAL(self):
-        pass
+        self.screen.fill(black, Rect(0, self.height - 50, self.width, 50))
+        r = self.gif_image.get_rect()
+        p = ( (self.width - r.width) / 2, (self.height - r.height) / 2)
+        self.gif_image.render(self.screen, p)
 
     def draw_STATE_THANKS(self):
+        self.screen.fill(black)
         pass
 
     #UPDATE
@@ -109,20 +119,32 @@ class GameState:
         self.transcripted = micrec.recognize(self.heard_bytes)
         print("Heard: %s" % self.transcripted)
         self.requested_game_state = STATE_THINKING
-        self.current_timer = 0
-        self.target_timer = 30*5
 
     def update_STATE_THINKING(self):
-        if self.current_timer >= self.target_timer:
+        import giphy
+        gif_url = giphy.giphy_translate(self.transcripted)
+        print("Gif URL: %s" % gif_url)
+        gif_response = requests.get(gif_url)
+
+        if gif_response.status_code == 200:
+            gif_bytes = gif_response.content
+            gif_filename = "temp.gif"
+            with open(gif_filename, "wb") as gif_file:
+                gif_file.write(gif_bytes)
+            self.gif_image = gifplayer.GIFImage(gif_filename) 
+            self.current_timer = 0
+            self.target_timer = 200
             self.requested_game_state = STATE_ABOUT_TO_REVEAL
-        else:
-            self.current_timer = self.current_timer + 1
+        
 
     def update_STATE_ABOUT_TO_REVEAL(self):
         self.requested_game_state = STATE_REVEAL 
 
     def update_STATE_REVEAL(self):
-        self.requested_game_state = STATE_THANKS
+        if self.current_timer >= self.target_timer:
+            self.requested_game_state = STATE_THANKS
+        else:
+            self.current_timer = self.current_timer + 1
 
     def update_STATE_THANKS(self):
         self.requested_game_state = STATE_IDLE
@@ -143,8 +165,7 @@ def init_and_loop():
             if event.type == pygame.QUIT: sys.exit()
             if event.type == pygame.KEYUP and event.key == K_q: sys.exit()
 
-        screen.fill(black)
-
+        
         game_state.draw()
 
         pygame.display.flip()
