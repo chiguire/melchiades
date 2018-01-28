@@ -49,3 +49,6 @@ sudo apt-get install fswebcam
 # fswebcam -d /dev/video0 -r 640x480 test.jpg
 
 # Font: Mortified by Walter E Stewart
+
+# sudo pip3 install pyserial
+# pySerial already part of Raspi install
